@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fleet Ops System - Scheduler KRLW</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* TEMA ASLI ANDA */
+        body { background: #f8fafc; color: #1e293b; font-family: 'Inter', sans-serif; font-size: 11px; transition: all 0.3s ease; }
+        .glass { background: white; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .tab-content { display: none; }
+        .active-page { display: block !important; }
+        .chart-container { position: relative; height: 90px; width: 90px; margin: auto; }
+        .chart-label { position: absolute; top: 60%; left: 50%; transform: translate(-50%, -50%); font-weight: 900; font-size: 10px; color: #1e293b; }
+        
+        /* DARK MODE CSS */
+        body.dark-mode { background: #0f172a; color: #f1f5f9; }
+        .dark-mode .glass { background: #1e293b; border-color: #334155; color: #f1f5f9; }
+        .dark-mode .bg-white { background: #1e293b !important; color: #f1f5f9 !important; border-color: #334155 !important; }
+        .dark-mode .text-slate-700, .dark-mode .text-slate-800, .dark-mode .text-slate-600 { color: #cbd5e1 !important; }
+        .dark-mode select, .dark-mode input { background: #334155 !important; color: white !important; border-color: #475569 !important; }
+        .dark-mode .chart-label { color: #ffffff; }
+        .dark-mode .bg-slate-50 { background: #334155 !important; }
+
+        /* MODAL & LOADER */
+        #login-page { position: fixed; inset: 0; background: #f8fafc; z-index: 2000; display: flex; justify-content: center; align-items: center; }
+        .dark-mode #login-page { background: #0f172a; }
+        #hint { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #3b82f6; color: white; padding: 10px 20px; border-radius: 20px; font-weight: bold; z-index: 100; animation: bounce 2s infinite; display: none; box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.5); }
+        @keyframes bounce { 0%, 20%, 50%, 80%, 100% {transform: translateY(0) translateX(-50%);} 40% {transform: translateY(-10px) translateX(-50%);} 60% {transform: translateY(-5px) translateX(-50%);} }
+        #loader { display: none; position: fixed; inset: 0; background: rgba(255, 255, 255, 0.8); z-index: 1000; justify-content: center; align-items: center; }
+        .overdue { color: #ef4444 !important; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        /* ALARM STYLE */
+        .alarm-card { border-left: 4px solid #ef4444; animation: blink-border 1.5s infinite; }
+        @keyframes blink-border { 50% { border-left-color: transparent; } }
+        .text-overdue { color: #ef4444 !important; font-weight: 800; }
+        .text-upcoming { color: #3b82f6 !important; font-weight: 800; }
+        #unitSuggestions { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #e2e8f0; border-radius: 0.75rem; z-index: 100; max-height: 200px; overflow-y: auto; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        .dark-mode #unitSuggestions { background: #1e293b; border-color: #334155; }
+    </style>
+</head>
+<body class="pb-24">
+    <div id="login-page">
+        <div class="glass p-8 rounded-3xl w-80 text-center space-y-4 border-2 border-blue-100">
+            <i class="fas fa-shield-alt text-4xl text-blue-500"></i>
+            <h2 class="font-black text-xl uppercase italic text-slate-700">Scheduler Login</h2>
+            <div class="space-y-2 text-left">
+                <label class="text-[9px] font-bold text-slate-400 ml-1">USERNAME</label>
+                <input type="text" id="user" placeholder="Scheduler KRLW" class="w-full p-3 border rounded-xl outline-none focus:ring-2 ring-blue-500">
+                <label class="text-[9px] font-bold text-slate-400 ml-1">PASSWORD</label>
+                <input type="password" id="pass" placeholder="•••••" class="w-full p-3 border rounded-xl outline-none focus:ring-2 ring-blue-500">
+            </div>
+            <button onclick="login()" class="w-full bg-blue-600 text-white p-3 rounded-xl font-bold shadow-lg shadow-blue-200">MASUK</button>
+        </div>
+    </div>
+
+    <div id="loader"><div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>
+    <div id="hint" class="text-[10px] uppercase tracking-wider"></div>
+
+    <div class="p-4 flex justify-between items-start bg-white border-b sticky top-0 z-40">
+        <div class="flex items-center gap-3">
+            <button onclick="toggleDarkMode()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-500">
+                <i id="theme-icon" class="fas fa-moon"></i>
+            </button>
+            <div>
+                <h1 class="text-blue-600 font-black italic text-lg uppercase leading-none">Fleet System</h1>
+                <p class="text-[9px] font-bold opacity-60">MONITORING DASHBOARD</p>
+            </div>
+        </div>
+        <div class="text-right text-[9px] font-bold text-slate-600">
+            <div class="text-blue-600 font-black">Scheduler KRLW</div>
+            <div id="txtDate">--/--/----</div>
+            <div id="txtTime" class="font-mono text-slate-400">00:00:00</div>
+        </div>
+    </div>
+
+    <div id="page-unit" class="tab-content active-page p-4 space-y-4 max-w-md mx-auto">
+        <div class="grid grid-cols-2 gap-2">
+            <div class="relative">
+                <input type="text" id="searchUnitInput" onkeyup="filterUnitSearch()" placeholder="CARI UNIT..." class="w-full bg-white p-3 rounded-xl border border-slate-200 font-bold outline-none italic shadow-sm text-slate-700 uppercase">
+                <div id="unitSuggestions" class="hidden glass"></div>
+                <select id="selUnit" onchange="getDetail(this.value)" class="hidden"></select>
+            </div>
+            <select id="selMonth" onchange="getDetail(document.getElementById('searchUnitInput').value)" class="bg-white p-3 rounded-xl border border-slate-200 font-bold outline-none italic shadow-sm text-slate-700">
+                <option value="0">Januari</option><option value="1">Februari</option><option value="2">Maret</option><option value="3">April</option><option value="4">Mei</option><option value="5">Juni</option><option value="6">Juli</option><option value="7">Agustus</option><option value="8">September</option><option value="9">Oktober</option><option value="10">November</option><option value="11">Desember</option>
+            </select>
+        </div>
+        <div id="cardUnit" class="hidden space-y-4">
+            <div class="glass p-4 rounded-[2rem] border-blue-50">
+                <div id="vHead"></div>
+                <div class="grid grid-cols-3 gap-1 mt-4 text-center">
+                    <div class="relative"><div class="chart-container"><canvas id="chartPA"></canvas><div id="valPA" class="chart-label italic">0%</div></div><p class="text-[7px] font-bold opacity-40 uppercase">Availability</p></div>
+                    <div class="relative"><div class="chart-container"><canvas id="chartMTTR"></canvas><div id="valMTTR" class="chart-label italic">0h</div></div><p class="text-[7px] font-bold opacity-40 uppercase">MTTR</p></div>
+                    <div class="relative"><div class="chart-container"><canvas id="chartMTBF"></canvas><div id="valMTBF" class="chart-label italic">0h</div></div><p class="text-[7px] font-bold opacity-40 uppercase">MTBF</p></div>
+                </div>
+            </div>
+            <div class="flex gap-1" id="tab-btns">
+                <button id="btnHist" onclick="switchTab('hist')" class="flex-1 glass p-2 rounded-xl border-blue-500 text-blue-600 font-black text-[8px] uppercase">Histori</button>
+                <button id="btnPart" onclick="switchTab('part')" class="flex-1 glass p-2 rounded-xl opacity-40 text-emerald-600 font-black text-[8px] uppercase">Sparepart</button>
+                <button id="btnRPL" onclick="switchTab('rpl')" class="flex-1 glass p-2 rounded-xl opacity-40 text-orange-600 font-black text-[8px] uppercase">RPL</button>
+            </div>
+            <div id="listLogs" class="space-y-2"></div>
+            <div id="listParts" class="hidden glass rounded-xl overflow-x-auto shadow-sm">
+                <table class="w-full text-left text-[8px] border-collapse"><thead class="bg-slate-50 text-emerald-600 font-bold uppercase"><tr><th class="p-2">Tgl Pasang</th><th class="p-2">Part No</th><th class="p-2">Material</th><th class="p-2">Qty</th></tr></thead><tbody id="bodyPart" class="divide-y divide-slate-100 text-slate-600"></tbody></table>
+            </div>
+            <div id="listRPL" class="hidden space-y-2">
+                <div class="glass p-2 rounded-xl flex items-center gap-2 border-orange-200">
+                    <i class="fas fa-search text-orange-400 ml-2"></i>
+                    <input type="text" id="searchRPL" onkeyup="filterRPLTable()" placeholder="Cari No. RPL..." class="bg-transparent w-full outline-none text-[9px] text-slate-600">
+                </div>
+                <div class="glass rounded-xl overflow-x-auto shadow-sm">
+                    <table class="w-full text-left text-[8px] border-collapse" id="tableRPL">
+                        <thead class="bg-slate-50 text-orange-600 font-bold uppercase"><tr><th class="p-2">Tgl Req</th><th class="p-2">No. RPL</th><th class="p-2">Part Number</th><th class="p-2">Material</th><th class="p-2">Qty</th></tr></thead>
+                        <tbody id="bodyRPL" class="divide-y divide-slate-100 text-slate-600"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-rekap" class="tab-content p-4 space-y-4 max-w-md mx-auto">
+        <h1 class="text-xl font-black text-blue-600 italic uppercase">Daily Monitoring</h1>
+        <div class="glass p-4 rounded-2xl space-y-3">
+            <div class="grid grid-cols-2 gap-2">
+                <input type="date" id="filterDate" class="p-2 rounded-lg border font-bold text-slate-600 outline-none">
+                <select id="filterType" class="p-2 rounded-lg border font-bold text-slate-600 outline-none"><option value="ALL">SEMUA UNIT</option><option value="HE">HE UNIT</option><option value="LV">LV UNIT</option></select>
+            </div>
+            <button onclick="fetchRekap()" class="w-full bg-blue-600 text-white p-3 rounded-xl font-black uppercase text-[10px] shadow-lg shadow-blue-100">Tampilkan Rekap</button>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+            <div class="glass p-3 rounded-xl text-center border-b-2 border-blue-500"><p id="sumTotal" class="text-lg font-black text-slate-800">0</p><p class="text-[7px] opacity-40 uppercase font-bold">Total BD</p></div>
+            <div class="glass p-3 rounded-xl text-center border-b-2 border-emerald-500"><p id="sumHE" class="text-lg font-black text-emerald-500">0</p><p class="text-[7px] opacity-40 uppercase font-bold">Total HE</p></div>
+            <div class="glass p-3 rounded-xl text-center border-b-2 border-orange-500"><p id="sumLV" class="text-lg font-black text-orange-500">0</p><p class="text-[7px] opacity-40 uppercase font-bold">Total LV</p></div>
+        </div>
+        <div id="aging30Container" class="hidden">
+            <h3 class="text-red-600 font-black text-[10px] uppercase italic mb-2 tracking-widest"><i class="fas fa-exclamation-triangle mr-1"></i> Unit Breakdown Over 30 days</h3>
+            <div id="listOver30" class="space-y-2 mb-4"></div>
+        </div>
+        <div class="glass rounded-xl overflow-x-auto shadow-sm">
+            <table class="w-full text-left text-[8px] border-collapse">
+                <thead class="bg-slate-50 uppercase text-blue-600 font-bold"><tr><th class="p-3">No</th><th class="p-3">Unit ID</th><th class="p-3">Aging</th><th class="p-3">Problem</th><th class="p-3">Mekanik</th></tr></thead>
+                <tbody id="tableBody" class="divide-y divide-slate-100 text-slate-600"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="page-service" class="tab-content p-4 space-y-4 max-w-md mx-auto">
+        <div class="flex justify-between items-end border-b pb-2 border-slate-200">
+            <h1 id="svcUnitTitle" class="text-2xl font-black text-blue-600 italic uppercase">SERVICE MONITORING</h1>
+            <div class="text-right">
+                <span class="text-[8px] opacity-60 block uppercase font-bold text-slate-400">HM Sekarang</span>
+                <span id="svcCurrent" class="text-2xl font-black italic text-slate-800">0</span>
+            </div>
+        </div>
+        <div id="cardSvc" class="hidden space-y-4">
+            <div class="glass p-4 rounded-xl flex justify-between items-center border-l-4 border-l-blue-500">
+                 <p class="text-[9px] font-black uppercase text-slate-400">Total HM Bulan Ini</p>
+                 <h2 id="svcMonthly" class="text-3xl font-black text-slate-800 italic">0</h2>
+            </div>
+            <div class="overflow-hidden rounded-xl border border-slate-200 shadow-sm">
+                <div class="grid grid-cols-2 bg-yellow-400 text-black font-black text-[9px] uppercase text-center py-2">
+                    <div class="border-r border-black/10">Service Terakhir</div>
+                    <div>Service Selanjutnya</div>
+                </div>
+                <div class="grid grid-cols-2 bg-white italic text-[10px]">
+                    <div class="p-3 space-y-2 border-r border-slate-100">
+                        <div class="flex justify-between"><span>HM:</span><b id="slVal" class="text-slate-700">-</b></div>
+                        <div class="flex justify-between"><span>Tgl:</span><b id="slDate" class="text-slate-700">-</b></div>
+                        <div class="flex justify-between"><span>Type:</span><b id="slType" class="text-emerald-600 font-black">-</b></div>
+                    </div>
+                    <div class="p-3 space-y-2">
+                        <div class="flex justify-between"><span>HM:</span><b id="snVal" class="text-slate-700">-</b></div>
+                        <div class="flex justify-between"><span>Est:</span><b id="snDate" class="text-slate-700">-</b></div>
+                        <div class="flex justify-between"><span>Type:</span><b id="snType" class="text-blue-600 font-black">-</b></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="mt-6">
+            <h3 class="text-red-600 font-black text-[10px] uppercase italic mb-2 tracking-widest"><i class="fas fa-bell mr-1"></i> TOP 10 Service Alarm</h3>
+            <div id="serviceAlarmList" class="space-y-2"></div>
+        </div>
+        <div id="svcWarning" class="glass p-10 rounded-xl text-center opacity-40 border-dashed border-2">
+            <i class="fas fa-mouse-pointer text-2xl mb-2 text-blue-400"></i>
+            <p class="font-bold">Silakan pilih Unit di menu Dashboard.</p>
+        </div>
+    </div>
+
+    <div id="page-workshop" class="tab-content p-4 space-y-4 max-w-md mx-auto">
+        <h1 class="text-xl font-black text-blue-600 italic uppercase">Workshop KPI</h1>
+        <select id="selMonthWS" onchange="fetchWorkshop()" class="bg-white p-3 rounded-xl border border-slate-200 font-bold w-full outline-none italic text-slate-700 shadow-sm"><option value="0">Januari</option><option value="1">Februari</option><option value="2">Maret</option><option value="3">April</option><option value="4">Mei</option><option value="5">Juni</option><option value="6">Juli</option><option value="7">Agustus</option><option value="8">September</option><option value="9">Oktober</option><option value="10">November</option><option value="11">Desember</option></select>
+        <div class="glass p-5 rounded-[2rem] border-blue-50 grid grid-cols-3 gap-1 text-center">
+            <div class="relative"><div class="chart-container"><canvas id="chartPAWS"></canvas><div id="valPAWS" class="chart-label italic text-emerald-600">0%</div></div><p class="text-[7px] font-bold opacity-40 uppercase">PA Workshop</p></div>
+            <div class="relative"><div class="chart-container"><canvas id="chartMTTRWS"></canvas><div id="valMTTRWS" class="chart-label italic">0h</div></div><p class="text-[7px] font-bold opacity-40 uppercase">Avg MTTR</p></div>
+            <div class="relative"><div class="chart-container"><canvas id="chartMTBFWS"></canvas><div id="valMTBFWS" class="chart-label italic">0h</div></div><p class="text-[7px] font-bold opacity-40 uppercase">Avg MTBF</p></div>
+        </div>
+        <div class="glass rounded-2xl p-4 shadow-sm"><h3 class="text-red-500 font-black text-[9px] uppercase mb-3 text-center tracking-widest">Unit Paling Rewel (MTBF)</h3><div id="listTopRewel" class="space-y-2"></div></div>
+    </div>
+
+    <div id="page-estate" class="tab-content p-4 space-y-4 max-w-md mx-auto">
+        <h1 class="text-xl font-black text-blue-600 italic uppercase">Estate Analysis</h1>
+        <div class="glass p-3 rounded-2xl shadow-sm">
+            <select id="selMonthEstate" onchange="fetchEstateAnalysis()" class="w-full font-black outline-none text-xs uppercase italic">
+                <option value="0">Januari</option><option value="1">Februari</option><option value="2">Maret</option>
+                <option value="3">April</option><option value="4">Mei</option><option value="5">Juni</option>
+                <option value="6">Juli</option><option value="7">Agustus</option><option value="8">September</option>
+                <option value="9">Oktober</option><option value="10">November</option><option value="11">Desember</option>
+            </select>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-2">
+            <div class="glass p-2 rounded-2xl text-center">
+                <p class="text-[8px] font-black uppercase mb-1">KRLE</p>
+                <div style="height: 120px;"><canvas id="chartKRLE"></canvas></div>
+            </div>
+            <div class="glass p-2 rounded-2xl text-center">
+                <p class="text-[8px] font-black uppercase mb-1">KRLW</p>
+                <div style="height: 120px;"><canvas id="chartKRLW"></canvas></div>
+            </div>
+            <div class="glass p-2 rounded-2xl text-center">
+                <p class="text-[8px] font-black uppercase mb-1">SWNE</p>
+                <div style="height: 120px;"><canvas id="chartSWNE"></canvas></div>
+            </div>
+            <div class="glass p-2 rounded-2xl text-center">
+                <p class="text-[8px] font-black uppercase mb-1">PRPE</p>
+                <div style="height: 120px;"><canvas id="chartPRPE"></canvas></div>
+            </div>
+        </div>
+
+        <div class="glass rounded-2xl overflow-hidden shadow-sm border border-slate-100">
+            <table class="w-full text-[9px] text-center border-collapse">
+                <thead class="bg-blue-600 text-white font-black uppercase">
+                    <tr><th class="p-2 text-left">TGL</th><th>KRLE</th><th>KRLW</th><th>SWNE</th><th>PRPE</th><th class="bg-blue-800 italic">TOT</th></tr>
+                </thead>
+                <tbody id="bodyEstateDaily" class="divide-y divide-slate-100 font-bold text-slate-600"></tbody>
+            </table>
+        </div>
+
+        <div class="glass rounded-2xl p-4 shadow-sm">
+            <h3 class="text-red-500 font-black text-[9px] uppercase mb-3 text-center tracking-widest italic">Unit Paling Sering Keluar Masuk Workshop</h3>
+            <div id="listEstateRewel" class="space-y-2"></div>
+        </div>
+    </div>
+
+    <div class="fixed bottom-0 inset-x-0 bg-white border-t flex justify-around p-4 pb-8 z-50 shadow-[0_-10px_20px_rgba(0,0,0,0.02)]">
+        <button onclick="navTo('unit')" id="nav-unit" class="flex flex-col items-center text-blue-500"><i class="fas fa-truck-monster text-lg"></i><span class="text-[8px] font-bold">UNIT</span></button>
+        <button onclick="navTo('rekap')" id="nav-rekap" class="flex flex-col items-center opacity-40 text-slate-400"><i class="fas fa-calendar-check text-lg"></i><span class="text-[8px] font-bold">REKAP</span></button>
+        <button onclick="navTo('service')" id="nav-service" class="flex flex-col items-center opacity-40 text-slate-400"><i class="fas fa-tools text-lg"></i><span class="text-[8px] font-bold">SERVICE</span></button>
+        <button onclick="navTo('workshop')" id="nav-workshop" class="flex flex-col items-center opacity-40 text-slate-400"><i class="fas fa-chart-line text-lg"></i><span class="text-[8px] font-bold">KPI WS</span></button>
+        <button onclick="navTo('estate')" id="nav-estate" class="flex flex-col items-center opacity-40 text-slate-400"><i class="fas fa-chart-pie text-lg"></i><span class="text-[8px] font-bold uppercase">Analytic</span></button>
+    </div>
+
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbxOAz5RV7fLijE__62FO2Y5r2fsUhd5d_-6HP5XMcZv-Ns78Kgm2Ss035cdLl6z9FAb/exec"; 
+        let charts = {};
+        let unitList = [];
+
+        function filterUnitSearch() {
+            const input = document.getElementById('searchUnitInput');
+            const filter = input.value.toUpperCase();
+            const div = document.getElementById('unitSuggestions');
+            div.innerHTML = '';
+            if (!filter) { div.classList.add('hidden'); return; }
+            const filtered = unitList.filter(u => u.toUpperCase().includes(filter));
+            if (filtered.length > 0) {
+                div.classList.remove('hidden');
+                filtered.forEach(u => {
+                    const item = document.createElement('div');
+                    item.className = 'p-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 font-bold text-slate-700';
+                    item.innerText = u;
+                    item.onclick = () => { input.value = u; div.classList.add('hidden'); getDetail(u); };
+                    div.appendChild(item);
+                });
+            } else { div.classList.add('hidden'); }
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const icon = document.getElementById('theme-icon');
+            icon.className = document.body.classList.contains('dark-mode') ? 'fas fa-sun' : 'fas fa-moon';
+        }
+
+        function login() {
+            const u = document.getElementById('user').value;
+            const p = document.getElementById('pass').value;
+            if(u === "Scheduler KRLW" && p === "12345") {
+                document.getElementById('login-page').style.display = 'none';
+                showHint("✅ Selamat Datang! Pilih unit untuk melihat data.");
+                init();
+            } else { alert("Username atau Password Salah!"); }
+        }
+
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('txtDate').innerText = now.toLocaleDateString('id-ID', {day:'2-digit', month:'long', year:'numeric'});
+            document.getElementById('txtTime').innerText = now.toLocaleTimeString('id-ID');
+        }
+        setInterval(updateClock, 1000);
+
+        function showHint(msg) {
+            const h = document.getElementById('hint');
+            h.innerText = msg;
+            h.style.display = 'block';
+            setTimeout(() => { h.style.display = 'none'; }, 4000);
+        }
+
+        const fmt = (v) => v ? parseFloat(v).toLocaleString('id-ID') : "0";
+
+        async function init() {
+            const r = await fetch(`${API_URL}?getOrders=true`);
+            const d = await r.json();
+            unitList = d;
+            const sel = document.getElementById('selUnit');
+            sel.innerHTML = '<option value="">-- PILIH UNIT --</option>';
+            d.forEach(u => { sel.innerHTML += `<option value="${u}">${u}</option>`; });
+            document.getElementById('filterDate').valueAsDate = new Date();
+            fetchServiceAlarm();
+        }
+
+        function navTo(p) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active-page'));
+            document.getElementById('page-' + p).classList.add('active-page');
+            document.querySelectorAll('.fixed button').forEach(b => b.classList.add('opacity-40'));
+            document.getElementById('nav-' + p).classList.remove('opacity-40');
+            if(p === 'unit') showHint("Pilih Unit & Bulan untuk menampilkan KPI.");
+            if(p === 'rekap') showHint("Pilih Tanggal & Klik 'Tampilkan Rekap'.");
+            if(p === 'service') fetchServiceAlarm();
+            if(p === 'workshop') fetchWorkshop();
+            if(p === 'estate') fetchEstateAnalysis();
+        }
+
+        function createDonut(id, val, color) {
+            if(charts[id]) charts[id].destroy();
+            const ctx = document.getElementById(id).getContext('2d');
+            charts[id] = new Chart(ctx, {
+                type: 'doughnut',
+                data: { datasets: [{ data: [val, 100-val], backgroundColor: [color, '#f1f5f9'], borderWidth: 0, circumference: 180, rotation: 270 }] },
+                options: { cutout: '85%', plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        async function fetchServiceAlarm() {
+            try {
+                const r = await fetch(`${API_URL}?getServiceAlarm=true`);
+                const data = await r.json();
+                const container = document.getElementById('serviceAlarmList');
+                container.innerHTML = "";
+                data.slice(0, 10).forEach(u => {
+                    const diff = parseFloat(u.remaining);
+                    let statusText = ""; let colorClass = ""; let isAlarm = false;
+                    if (diff < 0) { statusText = `Lebih ${fmt(Math.abs(diff))} ${u.type}`; colorClass = "text-overdue"; isAlarm = true; } 
+                    else { statusText = `Kurang ${fmt(diff)} ${u.type}`; colorClass = "text-upcoming"; isAlarm = diff <= (u.type === 'HM' ? 50 : 500); }
+                    const html = `<div class="glass p-3 rounded-xl flex justify-between items-center ${isAlarm ? 'alarm-card' : ''}"><div><div class="font-black text-slate-800 dark:text-white">${u.id}</div><div class="text-[8px] opacity-50 uppercase font-bold">${u.model}</div></div><div class="text-right"><div class="text-[10px] ${colorClass}">${statusText}</div><div class="text-[7px] opacity-40 font-bold uppercase">Status Servis</div></div></div>`;
+                    container.innerHTML += html;
+                });
+            } catch(e) { console.log("Alarm error: ", e); }
+        }
+
+        async function getDetail(id) {
+            if(!id) return;
+            document.getElementById('loader').style.display = 'flex';
+            const month = document.getElementById('selMonth').value;
+            const r = await fetch(`${API_URL}?orderId=${encodeURIComponent(id)}&month=${month}`);
+            const d = await r.json();
+            document.getElementById('cardUnit').classList.remove('hidden');
+            document.getElementById('vHead').innerHTML = `<h2 class="text-2xl font-black italic uppercase text-slate-800 dark:text-white">${id}</h2><p class="text-blue-500 font-bold text-[9px] uppercase tracking-wider">${d.detail.Model}</p><div class="grid grid-cols-2 gap-2 mt-2 opacity-60 text-[8px] font-mono text-slate-500"><div>SN FRAME: ${d.detail.NoFrame}</div><div>SN ENGINE: ${d.detail.NoEngine}</div></div>`;
+            document.getElementById('valPA').innerText = d.kpi.pa + "%";
+            document.getElementById('valMTTR').innerText = d.kpi.mttr + "h";
+            document.getElementById('valMTBF').innerText = d.kpi.mtbf + "h";
+            createDonut('chartPA', d.kpi.pa, '#10b981'); 
+            createDonut('chartMTTR', Math.min(100, d.kpi.mttr), '#3b82f6'); 
+            createDonut('chartMTBF', Math.min(100, d.kpi.mtbf), '#8b5cf6');
+            document.getElementById('listLogs').innerHTML = d.history.map(h => `<div class="glass p-3 rounded-xl border-l-4 border-blue-500 space-y-1"><div class="flex justify-between items-start"><span class="text-blue-600 font-black text-[9px] uppercase">${h.problem}</span><span class="text-[7px] opacity-40 font-bold">${h.tgl}</span></div><p class="text-[8px] italic text-slate-500">Action: ${h.action || '-'}</p><div class="flex justify-between text-[7px] pt-1 border-t border-slate-50 uppercase font-bold text-slate-400"><span>Mek: ${h.mechanic}</span><span class="bg-blue-50 text-blue-500 px-2 rounded">${h.status}</span></div></div>`).join('');
+            document.getElementById('bodyPart').innerHTML = d.spareparts.map(p => `<tr class="border-b border-slate-50"><td class="p-2 opacity-50">${p.tgl}</td><td class="p-2 font-mono text-blue-500 font-bold">${p.pNo}</td><td class="p-2 uppercase">${p.pName}</td><td class="p-2 text-center font-bold">${p.qty}</td></tr>`).join('');
+            document.getElementById('bodyRPL').innerHTML = d.rpl.map(p => `<tr><td class="p-2 opacity-60">${p.tgl}</td><td class="p-2 font-black text-orange-500">${p.noRpl}</td><td class="p-2 font-mono">${p.pNo}</td><td class="p-2 uppercase">${p.pName}</td><td class="p-2 text-center font-bold">${p.qty}</td></tr>`).join('');
+            document.getElementById('svcWarning').classList.add('hidden');
+            document.getElementById('cardSvc').classList.remove('hidden');
+            document.getElementById('svcUnitTitle').innerText = id;
+            document.getElementById('svcCurrent').innerText = fmt(d.service.current);
+            document.getElementById('svcMonthly').innerText = fmt(d.service.monthly);
+            document.getElementById('slVal').innerText = fmt(d.service.lastVal); 
+            document.getElementById('slDate').innerText = d.service.lastDate; 
+            document.getElementById('slType').innerText = d.service.lastType;
+            const nVal = document.getElementById('snVal');
+            const nHM = parseFloat(d.service.nextVal);
+            const cHM = parseFloat(d.service.current);
+            nVal.innerText = fmt(d.service.nextVal);
+            nVal.classList.toggle('overdue', cHM >= nHM); 
+            document.getElementById('snDate').innerText = d.service.nextDate; 
+            document.getElementById('snType').innerText = d.service.nextType;
+            document.getElementById('loader').style.display = 'none';
+            showHint("✅ Data berhasil dimuat!");
+        }
+
+        async function fetchRekap() {
+            document.getElementById('loader').style.display = 'flex';
+            try {
+                const r = await fetch(`${API_URL}?getRekap=true&date=${document.getElementById('filterDate').value}&type=${document.getElementById('filterType').value}`);
+                const res = await r.json();
+                document.getElementById('sumTotal').innerText = res.summary.total;
+                document.getElementById('sumHE').innerText = res.summary.he;
+                document.getElementById('sumLV').innerText = res.summary.lv;
+                const agingContainer = document.getElementById('aging30Container');
+                const listOver30 = document.getElementById('listOver30');
+                const over30Data = res.data.filter(d => parseInt(d.aging) > 30);
+                if (over30Data.length > 0) {
+                    agingContainer.classList.remove('hidden');
+                    listOver30.innerHTML = over30Data.map((u, i) => `<div class="glass p-3 rounded-xl border-l-4 border-red-600"><div class="grid grid-cols-5 gap-2 text-[9px] font-bold uppercase items-center"><div class="text-slate-400">${i + 1}</div><div class="text-blue-600 cursor-pointer underline font-black" onclick="showUnitHistory('${u.unit}')">${u.unit}</div><div class="text-slate-600">${u.type || 'HE/LV'}</div><div class="text-slate-600">${u.year || '-'}</div><div class="text-slate-600">${u.estate || '-'}</div></div></div>`).join('');
+                } else { agingContainer.classList.add('hidden'); }
+                document.getElementById('tableBody').innerHTML = res.data.map((d, i) => `<tr><td class="p-3">${i+1}</td><td class="p-3 font-black text-slate-700 dark:text-slate-300 whitespace-nowrap">${d.unit}</td><td class="p-3"><span class="${parseInt(d.aging) > 30 ? 'bg-red-600 text-white' : 'bg-red-50 text-red-500'} px-2 rounded font-black">${d.aging} HARI</span></td><td class="p-3 font-bold text-blue-500 uppercase">${d.problem}</td><td class="p-3 font-bold opacity-60 uppercase">${d.mechanic}</td></tr>`).join('');
+            } catch(e) { console.log(e); }
+            document.getElementById('loader').style.display = 'none';
+        }
+
+        async function showUnitHistory(unitID) {
+            document.getElementById('loader').style.display = 'flex';
+            try {
+                const r = await fetch(`${API_URL}?getUnitHistory=${unitID}`);
+                const history = await r.json();
+                let modalHtml = `<div id="modalHistory" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[3000] p-4 flex items-center justify-center"><div class="glass bg-white dark:bg-slate-800 w-full max-w-2xl rounded-3xl p-5 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"><div class="flex justify-between items-center mb-4 border-b pb-3"><div><h3 class="font-black text-blue-600 text-sm italic uppercase leading-none">History Breakdown</h3><p class="text-[9px] font-bold opacity-50 uppercase">${unitID}</p></div><button onclick="document.getElementById('modalHistory').remove()" class="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center shadow-sm"><i class="fas fa-times"></i></button></div><div class="overflow-auto flex-1"><table class="w-full text-[8px] text-left border-collapse"><thead class="bg-slate-50 dark:bg-slate-700 sticky top-0"><tr class="uppercase text-slate-400 font-black"><th class="p-2">Lama</th><th class="p-2">Problem</th><th class="p-2">Action</th><th class="p-2">Status</th><th class="p-2">Job Today</th></tr></thead><tbody class="divide-y divide-slate-100">${history.map(h => `<tr><td class="p-2 font-black text-red-600">${h.aging}D</td><td class="p-2 font-bold uppercase">${h.problem}</td><td class="p-2 italic">${h.action}</td><td class="p-2 font-black text-blue-600 uppercase">${h.status}</td><td class="p-2 text-emerald-600 font-bold">${h.actionToday || '-'}</td></tr>`).join('')}</tbody></table></div></div></div>`;
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+            } catch(e) { alert("Gagal memuat history unit."); }
+            document.getElementById('loader').style.display = 'none';
+        }
+
+        async function fetchWorkshop() {
+            document.getElementById('loader').style.display = 'flex';
+            const r = await fetch(`${API_URL}?getKPIWorkshop=true&month=${document.getElementById('selMonthWS').value}`);
+            const d = await r.json();
+            document.getElementById('valPAWS').innerText = d.pa + "%";
+            document.getElementById('valMTTRWS').innerText = d.mttr + "h";
+            document.getElementById('valMTBFWS').innerText = d.mtbf + "h";
+            createDonut('chartPAWS', d.pa, '#10b981'); 
+            createDonut('chartMTTRWS', Math.min(100, d.mttr), '#3b82f6'); 
+            createDonut('chartMTBFWS', Math.min(100, d.mtbf), '#8b5cf6');
+            document.getElementById('listTopRewel').innerHTML = d.top10.map((u, i) => `<div class="flex items-center justify-between glass p-2 rounded-lg border-l-2 ${i < 3 ? 'border-red-500' : 'border-slate-200'}"><div><span class="font-black text-slate-800 dark:text-white">${u.id}</span> <span class="text-[7px] opacity-40 ml-2 uppercase font-bold">${u.model}</span></div><div class="text-right"><span class="text-red-500 font-black">${parseFloat(u.mtbf).toFixed(1)}h</span><p class="text-[6px] opacity-30 font-black">MTBF</p></div></div>`).join('');
+            document.getElementById('loader').style.display = 'none';
+        }
+
+        /* --- FUNGSI ESTATE ANALYSIS (MODIFIED) --- */
+        async function fetchEstateAnalysis() {
+            document.getElementById('loader').style.display = 'flex';
+            try {
+                const month = document.getElementById('selMonthEstate').value;
+                const r = await fetch(`${API_URL}?getEstateAnalysis=true&month=${month}`);
+                const d = await r.json();
+                const estates = ['KRLE', 'KRLW', 'SWNE', 'PRPE'];
+                
+                // Render 4 Grafik Mini Hijau
+                estates.forEach(name => {
+                    const canvasId = 'chart' + name;
+                    if(charts[canvasId]) charts[canvasId].destroy();
+                    const ctx = document.getElementById(canvasId).getContext('2d');
+                    charts[canvasId] = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: d.daily.map(x => x.tgl),
+                            datasets: [{ data: d.daily.map(x => x[name]), backgroundColor: '#10b981', borderRadius: 2 }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: { x: { display: false }, y: { beginAtZero: true, ticks: { font: { size: 6 } } } }
+                        }
+                    });
+                });
+
+                // Render Tabel
+                document.getElementById('bodyEstateDaily').innerHTML = d.daily.filter(x => x.total > 0).map(x => `<tr><td class="p-2 text-left font-black">${x.tgl}</td><td>${x.KRLE}</td><td>${x.KRLW}</td><td>${x.SWNE}</td><td>${x.PRPE}</td><td class="bg-blue-50 dark:bg-slate-700 text-blue-700 dark:text-blue-300 font-bold">${x.total}</td></tr>`).join('');
+                
+                // Render List Unit Rewel (Berdasarkan Count BD Terbanyak)
+                if(d.topRewel) {
+                    document.getElementById('listEstateRewel').innerHTML = d.topRewel.map((u, i) => `
+                        <div class="flex items-center justify-between glass p-2 rounded-lg border-l-4 ${i < 3 ? 'border-red-600' : 'border-slate-200'}">
+                            <div><span class="font-black text-slate-800 dark:text-white">${u.unit}</span><span class="text-[7px] font-bold opacity-40 ml-1 uppercase font-black italic">Estate: ${u.estate}</span></div>
+                            <div class="text-right"><span class="bg-red-600 text-white px-2 py-1 rounded-md font-black text-[9px] italic">${u.count}x BD</span></div>
+                        </div>`).join('');
+                }
+            } catch(e) { console.log(e); }
+            document.getElementById('loader').style.display = 'none';
+        }
+
+        function filterRPLTable() {
+            let input = document.getElementById("searchRPL").value.toUpperCase();
+            let tr = document.getElementById("bodyRPL").getElementsByTagName("tr");
+            for (let i = 0; i < tr.length; i++) {
+                let td = tr[i].getElementsByTagName("td")[1];
+                if (td) tr[i].style.display = td.innerText.toUpperCase().indexOf(input) > -1 ? "" : "none";
+            }
+        }
+
+        function switchTab(t) {
+            document.getElementById('listLogs').classList.toggle('hidden', t !== 'hist');
+            document.getElementById('listParts').classList.toggle('hidden', t !== 'part');
+            document.getElementById('listRPL').classList.toggle('hidden', t !== 'rpl');
+            document.querySelectorAll('#tab-btns button').forEach(b => b.classList.add('opacity-40'));
+            document.getElementById('btn' + t.charAt(0).toUpperCase() + t.slice(1)).classList.remove('opacity-40');
+        }
+
+        window.onload = updateClock;
+    </script>
+</body>
+</html>
