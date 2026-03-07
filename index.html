@@ -4,61 +4,30 @@
     <link rel="manifest" href="manifest.json">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#000000">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#2563eb">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Fleet Ops System - Scheduler KRLW</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-      /* TEMA PREMIUM DARK MODE */
-body { 
-  background-color: #000000; /* Hitam pekat agar menyatu dengan bezel HP */
-  color: #f1f5f9; 
-  font-family: 'Inter', sans-serif; 
-  font-size: 13px; 
-  margin: 0; 
-  overscroll-behavior: none; /* Mencegah efek tarik-bawah browser */
-}
-
-/* Efek Kaca (Glassmorphism) untuk kartu */
-.glass { 
-  background: rgba(20, 20, 20, 0.7); 
-  backdrop-filter: blur(15px); 
-  border: 1px solid rgba(255, 255, 255, 0.1); 
-  border-radius: 16px; 
-}
-
-/* Container agar rapi di HP */
-.container { 
-  padding: 10px; 
-  padding-top: 20px; 
-}
-
-/* Modifikasi agar chart terlihat elegan */
-.chart-container { position: relative; height: 120px; width: 120px; margin: auto; }
-.chart-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: 700; font-size: 14px; color: #ffffff; }
-
-/* Input field premium */
-select, input { 
-  background: #1a1a1a !important; 
-  color: white !important; 
-  border: 1px solid #334155 !important; 
-  border-radius: 10px !important; 
-  padding: 10px !important; 
-}
-
-/* Modal & Loader agar di tengah layar */
-#login-page { 
-  position: fixed; inset: 0; 
-  background: #000000; 
-  z-index: 2000; 
-  display: flex; 
-  justify-content: center; 
-  align-items: center; 
-}
+        /* TEMA ASLI ANDA */
+        body { background: #f8fafc; color: #1e293b; font-family: 'Inter', sans-serif; font-size: 11px; transition: all 0.3s ease; }
+        .glass { background: white; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .tab-content { display: none; }
+        .active-page { display: block !important; }
+        .chart-container { position: relative; height: 90px; width: 90px; margin: auto; }
+        .chart-label { position: absolute; top: 60%; left: 50%; transform: translate(-50%, -50%); font-weight: 900; font-size: 10px; color: #1e293b; }
+        
+        /* DARK MODE CSS */
+        body.dark-mode { background: #0f172a; color: #f1f5f9; }
+        .dark-mode .glass { background: #1e293b; border-color: #334155; color: #f1f5f9; }
+        .dark-mode .bg-white { background: #1e293b !important; color: #f1f5f9 !important; border-color: #334155 !important; }
+        .dark-mode .text-slate-700, .dark-mode .text-slate-800, .dark-mode .text-slate-600 { color: #cbd5e1 !important; }
+        .dark-mode select, .dark-mode input { background: #334155 !important; color: white !important; border-color: #475569 !important; }
+        .dark-mode .chart-label { color: #ffffff; }
+        .dark-mode .bg-slate-50 { background: #334155 !important; }
 
         /* MODAL & LOADER */
         #login-page { position: fixed; inset: 0; background: #f8fafc; z-index: 2000; display: flex; justify-content: center; align-items: center; }
@@ -290,7 +259,7 @@ select, input {
     </div>
 
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbzomKIx1JHt6Lav3kfzDMKykDeFh6e9O1Y6xGxZH_1mu44owEnn3qDutEwGfMyihoqs/exec"; 
+        const API_URL = "https://script.google.com/macros/s/AKfycbxuXjujxeiC8yNLQ4lgusgQ6qVQAeSjrXQyahA5IU1Vs7NYcgwnR0vSbGH73w5dyhDh/exec"; 
         let charts = {};
         let unitList = [];
 
@@ -542,5 +511,3 @@ select, input {
 </body>
 
 </html>
-
-
