@@ -2,9 +2,9 @@
 <html lang="id">
 <head>
     <link rel="manifest" href="manifest.json">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#2563eb">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#2563eb">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Fleet Ops System - Scheduler KRLW</title>
@@ -12,7 +12,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* TEMA ASLI ANDA */
         body { background: #f8fafc; color: #1e293b; font-family: 'Inter', sans-serif; font-size: 11px; transition: all 0.3s ease; }
         .glass { background: white; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
         .tab-content { display: none; }
@@ -20,7 +19,6 @@
         .chart-container { position: relative; height: 90px; width: 90px; margin: auto; }
         .chart-label { position: absolute; top: 60%; left: 50%; transform: translate(-50%, -50%); font-weight: 900; font-size: 10px; color: #1e293b; }
         
-        /* DARK MODE CSS */
         body.dark-mode { background: #0f172a; color: #f1f5f9; }
         .dark-mode .glass { background: #1e293b; border-color: #334155; color: #f1f5f9; }
         .dark-mode .bg-white { background: #1e293b !important; color: #f1f5f9 !important; border-color: #334155 !important; }
@@ -29,7 +27,6 @@
         .dark-mode .chart-label { color: #ffffff; }
         .dark-mode .bg-slate-50 { background: #334155 !important; }
 
-        /* MODAL & LOADER */
         #login-page { position: fixed; inset: 0; background: #f8fafc; z-index: 2000; display: flex; justify-content: center; align-items: center; }
         .dark-mode #login-page { background: #0f172a; }
         #hint { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #3b82f6; color: white; padding: 10px 20px; border-radius: 20px; font-weight: bold; z-index: 100; animation: bounce 2s infinite; display: none; box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.5); }
@@ -38,7 +35,6 @@
         .overdue { color: #ef4444 !important; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
-        /* ALARM STYLE */
         .alarm-card { border-left: 4px solid #ef4444; animation: blink-border 1.5s infinite; }
         @keyframes blink-border { 50% { border-left-color: transparent; } }
         .text-overdue { color: #ef4444 !important; font-weight: 800; }
@@ -216,22 +212,10 @@
             </select>
         </div>
         
-        <div class="grid grid-cols-2 gap-2">
-            <div class="glass p-2 rounded-2xl text-center">
-                <p class="text-[8px] font-black uppercase mb-1">KRLE</p>
-                <div style="height: 120px;"><canvas id="chartKRLE"></canvas></div>
-            </div>
-            <div class="glass p-2 rounded-2xl text-center">
-                <p class="text-[8px] font-black uppercase mb-1">KRLW</p>
-                <div style="height: 120px;"><canvas id="chartKRLW"></canvas></div>
-            </div>
-            <div class="glass p-2 rounded-2xl text-center">
-                <p class="text-[8px] font-black uppercase mb-1">SWNE</p>
-                <div style="height: 120px;"><canvas id="chartSWNE"></canvas></div>
-            </div>
-            <div class="glass p-2 rounded-2xl text-center">
-                <p class="text-[8px] font-black uppercase mb-1">PRPE</p>
-                <div style="height: 120px;"><canvas id="chartPRPE"></canvas></div>
+        <div class="glass p-4 rounded-2xl text-center">
+            <p class="text-[9px] font-black uppercase mb-3 text-blue-600 italic">Daily Breakdown Analysis per Estate</p>
+            <div style="height: 250px; width: 100%;">
+                <canvas id="chartEstateCombined"></canvas>
             </div>
         </div>
 
@@ -259,28 +243,9 @@
     </div>
 
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbxAMPUIKSJ0lXKC-DjP1gAhLQBf-NxLEdzY1xlokHCOenGYxM5nLoVIU-5T_1B4zuFT/exec"; 
+        const API_URL = "https://script.google.com/macros/s/AKfycbz9wz1D3wzu9aTicL3lZd9BLaVdXgvQI2o0_5Lmm5eIRFWAdyTomDGtViZ9J07jEaq0/exec"; 
         let charts = {};
         let unitList = [];
-
-        function filterUnitSearch() {
-            const input = document.getElementById('searchUnitInput');
-            const filter = input.value.toUpperCase();
-            const div = document.getElementById('unitSuggestions');
-            div.innerHTML = '';
-            if (!filter) { div.classList.add('hidden'); return; }
-            const filtered = unitList.filter(u => u.toUpperCase().includes(filter));
-            if (filtered.length > 0) {
-                div.classList.remove('hidden');
-                filtered.forEach(u => {
-                    const item = document.createElement('div');
-                    item.className = 'p-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 font-bold text-slate-700';
-                    item.innerText = u;
-                    item.onclick = () => { input.value = u; div.classList.add('hidden'); getDetail(u); };
-                    div.appendChild(item);
-                });
-            } else { div.classList.add('hidden'); }
-        }
 
         function toggleDarkMode() {
             document.body.classList.toggle('dark-mode');
@@ -345,6 +310,25 @@
                 data: { datasets: [{ data: [val, 100-val], backgroundColor: [color, '#f1f5f9'], borderWidth: 0, circumference: 180, rotation: 270 }] },
                 options: { cutout: '85%', plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false }
             });
+        }
+
+        function filterUnitSearch() {
+            const input = document.getElementById('searchUnitInput');
+            const filter = input.value.toUpperCase();
+            const div = document.getElementById('unitSuggestions');
+            div.innerHTML = '';
+            if (!filter) { div.classList.add('hidden'); return; }
+            const filtered = unitList.filter(u => u.toUpperCase().includes(filter));
+            if (filtered.length > 0) {
+                div.classList.remove('hidden');
+                filtered.forEach(u => {
+                    const item = document.createElement('div');
+                    item.className = 'p-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 font-bold text-slate-700';
+                    item.innerText = u;
+                    item.onclick = () => { input.value = u; div.classList.add('hidden'); getDetail(u); };
+                    div.appendChild(item);
+                });
+            } else { div.classList.add('hidden'); }
         }
 
         async function fetchServiceAlarm() {
@@ -445,39 +429,47 @@
             document.getElementById('loader').style.display = 'none';
         }
 
-        /* --- FUNGSI ESTATE ANALYSIS (MODIFIED) --- */
+        /* --- FUNGSI ESTATE ANALYSIS (FIXED GABUNGAN) --- */
         async function fetchEstateAnalysis() {
             document.getElementById('loader').style.display = 'flex';
             try {
                 const month = document.getElementById('selMonthEstate').value;
                 const r = await fetch(`${API_URL}?getEstateAnalysis=true&month=${month}`);
                 const d = await r.json();
-                const estates = ['KRLE', 'KRLW', 'SWNE', 'PRPE'];
                 
-                // Render 4 Grafik Mini Hijau
-                estates.forEach(name => {
-                    const canvasId = 'chart' + name;
-                    if(charts[canvasId]) charts[canvasId].destroy();
-                    const ctx = document.getElementById(canvasId).getContext('2d');
-                    charts[canvasId] = new Chart(ctx, {
-                        type: 'bar',
-                        data: {
-                            labels: d.daily.map(x => x.tgl),
-                            datasets: [{ data: d.daily.map(x => x[name]), backgroundColor: '#10b981', borderRadius: 2 }]
+                // RENDER GABUNGAN (STACKED BAR CHART)
+                const canvasId = 'chartEstateCombined';
+                if(charts['estateCombined']) charts['estateCombined'].destroy();
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                
+                charts['estateCombined'] = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: d.daily.map(x => x.tgl),
+                        datasets: [
+                            { label: 'KRLE', data: d.daily.map(x => x.KRLE), backgroundColor: '#10b981', borderRadius: 2 },
+                            { label: 'KRLW', data: d.daily.map(x => x.KRLW), backgroundColor: '#3b82f6', borderRadius: 2 },
+                            { label: 'SWNE', data: d.daily.map(x => x.SWNE), backgroundColor: '#f59e0b', borderRadius: 2 },
+                            { label: 'PRPE', data: d.daily.map(x => x.PRPE), backgroundColor: '#ef4444', borderRadius: 2 }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { 
+                            legend: { display: true, position: 'top', labels: { boxWidth: 10, font: { size: 9 }, color: document.body.classList.contains('dark-mode') ? 'white' : '#1e293b' } } 
                         },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: { legend: { display: false } },
-                            scales: { x: { display: false }, y: { beginAtZero: true, ticks: { font: { size: 6 } } } }
+                        scales: { 
+                            x: { stacked: true, ticks: { font: { size: 7 }, color: document.body.classList.contains('dark-mode') ? 'white' : '#1e293b' }, grid: { display: false } }, 
+                            y: { stacked: true, beginAtZero: true, ticks: { font: { size: 7 }, color: document.body.classList.contains('dark-mode') ? 'white' : '#1e293b' } } 
                         }
-                    });
+                    }
                 });
 
                 // Render Tabel
                 document.getElementById('bodyEstateDaily').innerHTML = d.daily.filter(x => x.total > 0).map(x => `<tr><td class="p-2 text-left font-black">${x.tgl}</td><td>${x.KRLE}</td><td>${x.KRLW}</td><td>${x.SWNE}</td><td>${x.PRPE}</td><td class="bg-blue-50 dark:bg-slate-700 text-blue-700 dark:text-blue-300 font-bold">${x.total}</td></tr>`).join('');
                 
-                // Render List Unit Rewel (Berdasarkan Count BD Terbanyak)
+                // Render List Unit Rewel
                 if(d.topRewel) {
                     document.getElementById('listEstateRewel').innerHTML = d.topRewel.map((u, i) => `
                         <div class="flex items-center justify-between glass p-2 rounded-lg border-l-4 ${i < 3 ? 'border-red-600' : 'border-slate-200'}">
@@ -509,9 +501,4 @@
         window.onload = updateClock;
     </script>
 </body>
-
 </html>
-
-
-
-
